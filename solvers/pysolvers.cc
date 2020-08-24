@@ -83,6 +83,7 @@ static char     nvars_docstring[] = "Get number of variables used by the solver.
 static char      ncls_docstring[] = "Get number of clauses used by the solver.";
 static char       del_docstring[] = "Delete a previously created solver object.";
 static char  acc_stat_docstring[] = "Get accumulated stats from the solver.";
+static char  set_argc_docstring[] = "Pass commandline arguments to the solver.";
 
 static PyObject *SATError;
 static jmp_buf env;
@@ -141,6 +142,7 @@ extern "C" {
 	static PyObject *py_glucose41_nof_cls   (PyObject *, PyObject *);
 	static PyObject *py_glucose41_del       (PyObject *, PyObject *);
 	static PyObject *py_glucose41_acc_stats (PyObject *, PyObject *);
+	static PyObject *py_glucose41_set_argc  (PyObject *, PyObject *);
 #endif
 #ifdef WITH_LINGELING
 	static PyObject *py_lingeling_new       (PyObject *, PyObject *);
@@ -323,6 +325,7 @@ static PyMethodDef module_methods[] = {
 	{ "glucose41_nof_cls",   py_glucose41_nof_cls,   METH_VARARGS,      ncls_docstring },
 	{ "glucose41_del",       py_glucose41_del,       METH_VARARGS,       del_docstring },
 	{ "glucose41_acc_stats", py_glucose41_acc_stats, METH_VARARGS,  acc_stat_docstring },
+	{ "glucose41_set_argc",  py_glucose41_set_argc,  METH_VARARGS,  set_argc_docstring },
 #endif
 #ifdef WITH_LINGELING
 	{ "lingeling_new",       py_lingeling_new,       METH_VARARGS,      new_docstring },
@@ -2054,6 +2057,49 @@ static PyObject *py_glucose41_acc_stats(PyObject *self, PyObject *args)
 		"decisions", s->decisions,
 		"propagations", s->propagations
 	);
+}
+
+
+//
+//=============================================================================
+static PyObject *py_glucose41_set_argc(PyObject *self, PyObject *args)
+{
+	PyObject *s_list;
+
+	if (!PyArg_ParseTuple(args, "O", &s_list))
+		return NULL;
+
+	if (!PyList_Check(s_list))
+		return NULL;
+
+	int len = PyList_Size(s_list);
+
+	char** argv = (char**)calloc(sizeof(char*), len + 2);
+	
+	// argv[0] is the name of the program, so skip
+	for(int i = 0; i < len; i++) {
+		PyObject* s_item = PyList_GetItem(s_list, i);
+		if(!PyUnicode_Check(s_item)) {
+			free(argv);
+			return NULL;
+		}
+
+		// The solver does not edit this string, but is not const-correct
+		argv[i+1] = const_cast<char*>(PyUnicode_AsUTF8(s_item));
+	}
+
+	int argc = len + 1;
+	Glucose41::parseOptions(argc, argv, false);
+	
+	free(argv);
+
+	// Return if we parsed all the arguments
+	if(argc == 1) {
+		Py_RETURN_TRUE;
+	}
+	else {
+		Py_RETURN_FALSE;
+	}
 }
 #endif  // WITH_GLUCOSE41
 
