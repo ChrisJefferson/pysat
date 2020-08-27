@@ -625,11 +625,14 @@ diff -Naur solvers/glucose41/core/Solver.cc solvers/g41/core/Solver.cc
 +                return g41l_False;
  
              }
-             if(adaptStrategies && conflicts == 100000) {
+-            if(adaptStrategies && conflicts == 100000) {
++            if( (adaptStrategies && conflicts == 100000) || !withinBudget() ) {
                  cancelUntil(0);
-                 adaptSolver();
-                 adaptStrategies = false;
+-                adaptSolver();
+-                adaptStrategies = false;
 -                return l_Undef;
++                if( (adaptStrategies && conflicts == 100000) ) adaptSolver();
++                if( (adaptStrategies && conflicts == 100000) ) adaptStrategies = false;
 +                return g41l_Undef;
              }
  
